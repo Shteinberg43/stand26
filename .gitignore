@@ -1,0 +1,5 @@
+UML/
+*.png
+.agents/
+TODO.md
+__pycache__/

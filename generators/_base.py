@@ -26,22 +26,3 @@ class DataGenerator(ABC, Generic[T]):
         """
         ...
 
-    def generate(self, size: int, seed: int) -> list[T]:
-        """Вспомогательный метод: генерирует стандартный встроенный список (list).
-        
-        Создает пустой ListInserter, делегирует генерацию методу `fill` 
-        и возвращает результирующий список.
-
-        Args:
-            size: Количество элементов в генерируемой структуре.
-            seed: Зерно ГПСЧ для воспроизводимости.
-
-        Returns:
-            Сгенерированный список элементов типа ``T``.
-        """
-        inserter = ListInserter[T]()
-        self.fill(inserter, size, seed)
-        return inserter.target
-
-
-
