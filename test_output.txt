@@ -1,0 +1,13 @@
+
+STDERR:
+test_any_increments_total_ops (test_stage2.Stage2WatchdogTests.test_any_increments_total_ops) ... ok
+test_array_read_only_increments_reads (test_stage2.Stage2WatchdogTests.test_array_read_only_increments_reads) ... ok
+test_cmp_only_increments_comparisons (test_stage2.Stage2WatchdogTests.test_cmp_only_increments_comparisons) ... ok
+test_parse_stop_if_with_symbol_table (test_stage2.Stage2WatchdogTests.test_parse_stop_if_with_symbol_table) ... ok
+test_stop_if_comparisons_ge_5_stops_when_reaches_5 (test_stage2.Stage2WatchdogTests.test_stop_if_comparisons_ge_5_stops_when_reaches_5) ... ok
+test_stop_if_total_ops_gt_10_stops_on_11th_event (test_stage2.Stage2WatchdogTests.test_stop_if_total_ops_gt_10_stops_on_11th_event) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+OK
