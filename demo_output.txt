@@ -1,11 +1,15 @@
-step=01 op=        CMP snapshot={'comparisons': 1, 'reads': 0, 'writes': 0, 'total_ops': 1}
-step=02 op= ARRAY_READ snapshot={'comparisons': 1, 'reads': 1, 'writes': 0, 'total_ops': 2}
-step=03 op=     ASSIGN snapshot={'comparisons': 1, 'reads': 1, 'writes': 0, 'total_ops': 3}
-step=04 op=        CMP snapshot={'comparisons': 2, 'reads': 1, 'writes': 0, 'total_ops': 4}
-step=05 op=        CMP snapshot={'comparisons': 3, 'reads': 1, 'writes': 0, 'total_ops': 5}
-step=06 op=ARRAY_WRITE snapshot={'comparisons': 3, 'reads': 1, 'writes': 1, 'total_ops': 6}
-step=07 op=        CMP snapshot={'comparisons': 4, 'reads': 1, 'writes': 1, 'total_ops': 7}
-step=08 op=     ASSIGN snapshot={'comparisons': 4, 'reads': 1, 'writes': 1, 'total_ops': 8}
-step=09 op=        CMP snapshot={'comparisons': 5, 'reads': 1, 'writes': 1, 'total_ops': 9}
-step=10 op=       CALL snapshot={'comparisons': 5, 'reads': 1, 'writes': 1, 'total_ops': 10}
-step=11 op=     RETURN LIMIT: STOP_IF total_ops > 10; actual=11
+RAW RUNS:
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
+{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
+
+AGGREGATES:
+AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'random', 'n': 8}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 4.0, 'median': 4.0, 'std': 0.0}, 'comparisons': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'total_ops': {'mean': 12.0, 'median': 12.0, 'std': 0.0}})
+AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'sorted', 'n': 8}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 4.0, 'median': 4.0, 'std': 0.0}, 'comparisons': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'total_ops': {'mean': 12.0, 'median': 12.0, 'std': 0.0}})
+AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'random', 'n': 16}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'comparisons': {'mean': 16.0, 'median': 16.0, 'std': 0.0}, 'total_ops': {'mean': 24.0, 'median': 24.0, 'std': 0.0}})
+AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'sorted', 'n': 16}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'comparisons': {'mean': 16.0, 'median': 16.0, 'std': 0.0}, 'total_ops': {'mean': 24.0, 'median': 24.0, 'std': 0.0}})
