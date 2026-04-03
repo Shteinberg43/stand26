@@ -1,15 +1,4 @@
-RAW RUNS:
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 8, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 12, 'comparisons': 8, 'assignments': 4}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'random', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 0, 'seed': 100, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
-{'experiment_id': 'stage4-demo', 'algorithm_name': 'quick_sort', 'params': {'n': 16, 'mode': 'sorted', 'low': 0, 'high': 50}, 'trial_index': 1, 'seed': 101, 'status': 'OK', 'counters': {'total_ops': 24, 'comparisons': 16, 'assignments': 8}, 'error_message': None}
-
-AGGREGATES:
-AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'random', 'n': 8}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 4.0, 'median': 4.0, 'std': 0.0}, 'comparisons': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'total_ops': {'mean': 12.0, 'median': 12.0, 'std': 0.0}})
-AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'sorted', 'n': 8}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 4.0, 'median': 4.0, 'std': 0.0}, 'comparisons': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'total_ops': {'mean': 12.0, 'median': 12.0, 'std': 0.0}})
-AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'random', 'n': 16}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'comparisons': {'mean': 16.0, 'median': 16.0, 'std': 0.0}, 'total_ops': {'mean': 24.0, 'median': 24.0, 'std': 0.0}})
-AggregateMetric(group_key={'high': 50, 'low': 0, 'mode': 'sorted', 'n': 16}, status_counts={'OK': 2}, counter_stats={'assignments': {'mean': 8.0, 'median': 8.0, 'std': 0.0}, 'comparisons': {'mean': 16.0, 'median': 16.0, 'std': 0.0}, 'total_ops': {'mean': 24.0, 'median': 24.0, 'std': 0.0}})
+DEMO STAGE 5
+run1: status=OK, scheduled=2, steps=15, error=None
+run2: status=LIMIT, scheduled=2, steps=12, error=STOP_IF total_ops > limit
+run3: status=ERROR, scheduled=1, steps=5, error=index out of bounds

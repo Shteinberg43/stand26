@@ -1,6 +1,8 @@
 class PseudoCodeRuntimeError(Exception):
-    """Base class for user-program runtime failures inside the pseudocode interpreter."""
+    """Ошибка времени выполнения внутри исполняемой псевдопрограммы."""
+    pass
 
 
-class UserProgramCrashed(PseudoCodeRuntimeError):
-    """Raised when a user algorithm crashes during execution."""
+class ExecutionLimitExceeded(PseudoCodeRuntimeError):
+    """Превышен лимит операций / сработало STOP_IF."""
+    pass

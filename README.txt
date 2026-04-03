@@ -1,8 +1,8 @@
 Stage 4 package contents
 - a2t/ : Python modules
-- tests/test.py : unit tests
-- demo.py : demo script
+- tests/test_stage5.py : unit tests
+- demo_stage5.py : demo script
 
 Run:
-  python -m unittest tests/test.py
-  python demo.py
+  python -m unittest tests/test_stage5.py
+  python demo_stage5.py
