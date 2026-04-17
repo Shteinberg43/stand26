@@ -1,16 +1,6 @@
-from __future__ import annotations
-from typing import Any, Dict, Iterator
-
-
 class Stepper:
-    """
-    Обертка над пошаговым исполнением одной программы.
-    Интерпретатор должен предоставлять метод execute_iter(program, inputs),
-    возвращающий итератор событий выполнения.
-    """
-
-    def __init__(self, interpreter: Any, program: Any, inputs: Dict[str, Any]):
-        self._iter: Iterator[Any] = interpreter.execute_iter(program, inputs)
+    def __init__(self, interpreter, program, inputs):
+        self._iter = interpreter.execute_iter(program, inputs)
         self.finished = False
 
     def step(self):

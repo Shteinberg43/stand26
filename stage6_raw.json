@@ -1,0 +1,154 @@
+[
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 5,
+      "mode": "random"
+    },
+    "trial_index": 0,
+    "seed": 100,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 5,
+      "mode": "random"
+    },
+    "trial_index": 1,
+    "seed": 101,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 5,
+      "mode": "sorted"
+    },
+    "trial_index": 0,
+    "seed": 100,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 5,
+      "mode": "sorted"
+    },
+    "trial_index": 1,
+    "seed": 101,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 8,
+      "mode": "random"
+    },
+    "trial_index": 0,
+    "seed": 100,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 8,
+      "mode": "random"
+    },
+    "trial_index": 1,
+    "seed": 101,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 8,
+      "mode": "sorted"
+    },
+    "trial_index": 0,
+    "seed": 100,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  },
+  {
+    "experiment_id": "final-stage6",
+    "algorithm_name": "demo_alg",
+    "params": {
+      "n": 8,
+      "mode": "sorted"
+    },
+    "trial_index": 1,
+    "seed": 101,
+    "status": "OK",
+    "counters": {
+      "total_ops": 5,
+      "comparisons": 1,
+      "assignments": 1,
+      "array_reads": 1,
+      "array_writes": 1
+    },
+    "error_message": null
+  }
+]

@@ -1,8 +1,7 @@
 class PseudoCodeRuntimeError(Exception):
-    """Ошибка времени выполнения внутри исполняемой псевдопрограммы."""
+    """Base exception for runtime errors inside pseudo-code semantics."""
     pass
 
 
-class ExecutionLimitExceeded(PseudoCodeRuntimeError):
-    """Превышен лимит операций / сработало STOP_IF."""
+class UserProgramCrashed(PseudoCodeRuntimeError):
     pass

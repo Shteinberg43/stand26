@@ -1,4 +1,0 @@
-DEMO STAGE 5
-run1: status=OK, scheduled=2, steps=15, error=None
-run2: status=LIMIT, scheduled=2, steps=12, error=STOP_IF total_ops > limit
-run3: status=ERROR, scheduled=1, steps=5, error=index out of bounds

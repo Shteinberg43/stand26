@@ -1,0 +1,9 @@
+algorithm_name,counters.array_reads,counters.array_writes,counters.assignments,counters.comparisons,counters.total_ops,error_message,experiment_id,params.mode,params.n,seed,status,trial_index
+demo_alg,1,1,1,1,5,,final-stage6,random,5,100,OK,0
+demo_alg,1,1,1,1,5,,final-stage6,random,5,101,OK,1
+demo_alg,1,1,1,1,5,,final-stage6,sorted,5,100,OK,0
+demo_alg,1,1,1,1,5,,final-stage6,sorted,5,101,OK,1
+demo_alg,1,1,1,1,5,,final-stage6,random,8,100,OK,0
+demo_alg,1,1,1,1,5,,final-stage6,random,8,101,OK,1
+demo_alg,1,1,1,1,5,,final-stage6,sorted,8,100,OK,0
+demo_alg,1,1,1,1,5,,final-stage6,sorted,8,101,OK,1
