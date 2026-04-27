@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import Any, Dict, List, Optional
 
 from src.demo.models.nodes import ASTNode
@@ -22,9 +23,65 @@ def _safe_publish(
     meta: Optional[Dict[str, Any]] = None,
     counters: Optional[Dict[str, int]] = None,
 ) -> None:
+    meta_out = dict(meta or {})
+    counters_out = dict(counters or {})
+
+    aliases = _experiment_state(context).get("counter_aliases", {})
+    if aliases and not meta_out.get("experiment_control"):
+        for alias, event_name in aliases.items():
+            amount = _alias_increment(event_name, op, meta_out, counters_out)
+            if amount:
+                counters_out[alias] = counters_out.get(alias, 0) + amount
+
+    state = _experiment_state(context)
+    if counters_out:
+        state["runtime_counters"] = _merge_all(state.get("runtime_counters", {}), counters_out)
+
     publisher = getattr(context, "publish_step", None)
     if callable(publisher):
-        publisher(op, meta, counters)
+        publisher(op, meta_out, counters_out if counters is not None or counters_out else None)
+
+
+def _event_name(op: Any) -> str:
+    return str(getattr(op, "name", op)).upper()
+
+
+def _alias_increment(
+    event_name: str,
+    op: Any,
+    meta: Dict[str, Any],
+    counters: Dict[str, int],
+) -> int:
+    target = str(event_name).upper()
+    op_name = _event_name(op)
+    event_counter_keys = {
+        "READ": "reads",
+        "ARRAY_READ": "reads",
+        "WRITE": "writes",
+        "ARRAY_WRITE": "writes",
+        "ASSIGN": "assignments",
+        "CMP": "comparisons",
+        "COMPARE": "comparisons",
+        "BRANCH": "branches",
+        "CALL": "calls",
+        "ALLOC": "allocations",
+        "RETURN": "total_ops",
+        "EXIT": "total_ops",
+        "ANY": "total_ops",
+    }
+
+    if target in event_counter_keys:
+        if target == "ANY" or target == op_name or (target == "ARRAY_READ" and op_name == "READ") or (
+            target == "ARRAY_WRITE" and op_name == "WRITE"
+        ):
+            return int(counters.get(event_counter_keys[target], counters.get("total_ops", 1)))
+        return 0
+
+    callee = str(meta.get("callee", "")).lower()
+    kind = str(meta.get("kind", "")).lower()
+    if target.lower() in (callee, kind):
+        return int(counters.get("calls", counters.get("total_ops", 1)))
+    return 0
 
 
 def _ensure_result(value: Any) -> EvalResult:
@@ -163,6 +220,17 @@ def _iter_items(value: Any) -> List[Any]:
         return [value]
 
 
+def _experiment_seed(context: EvalContext, explicit_seed: Any = None) -> Any:
+    if explicit_seed is not None:
+        return explicit_seed
+    state = _experiment_state(context)
+    base_seed = state.get("seed", context.symbol_table.get("seed"))
+    trial_seed = state.get("trial_seed", 0)
+    if base_seed is None:
+        return None
+    return int(base_seed) + int(trial_seed or 0)
+
+
 def _resolve_callable(context: EvalContext, name: str):
     candidate = context.symbol_table.get(name)
     if callable(candidate):
@@ -186,6 +254,83 @@ def _builtin_call(name: str, args: List[Any], context: EvalContext) -> tuple[Any
     if name == "quick_sort":
         seq = _iter_items(args[0]) if args else []
         return sorted(seq), {"calls": 1, "allocations": 1, "total_ops": 1}
+
+    if name == "create_array":
+        n = int(args[0]) if args else 0
+        default = args[1] if len(args) > 1 else 0
+        return [default] * (n + 1), {"calls": 1, "allocations": 1, "total_ops": 1}
+
+    if name == "create_matrix":
+        rows = int(args[0]) if args else 0
+        cols = int(args[1]) if len(args) > 1 else 0
+        default = args[2] if len(args) > 2 else 0
+        return [[default] * (cols + 1) for _ in range(rows + 1)], {
+            "calls": 1,
+            "allocations": 1,
+            "total_ops": 1,
+        }
+
+    if name == "range_set":
+        lo = int(args[0]) if args else 0
+        hi = int(args[1]) if len(args) > 1 else 0
+        return list(range(lo, hi + 1)), {"calls": 1, "allocations": 1, "total_ops": 1}
+
+    if name == "remove":
+        collection = args[0] if args else []
+        item = args[1] if len(args) > 1 else None
+        if isinstance(collection, list) and item in collection:
+            collection.remove(item)
+        return None, {"calls": 1, "total_ops": 1}
+
+    if name == "adj":
+        graph = args[0] if args else []
+        v = int(args[1]) if len(args) > 1 else 0
+        if isinstance(graph, list) and 0 <= v < len(graph):
+            return graph[v], {"calls": 1, "reads": 1, "total_ops": 1}
+        return [], {"calls": 1, "total_ops": 1}
+
+    if name == "get_vertices":
+        graph = args[0] if args else []
+        n = max(len(graph) - 1, 0) if isinstance(graph, list) else 0
+        return list(range(1, n + 1)), {"calls": 1, "allocations": 1, "total_ops": 1}
+
+    if name == "is_empty":
+        collection = args[0] if args else []
+        return 1 if not collection else 0, {"calls": 1, "total_ops": 1}
+
+    if name == "quick_sort_by_degree":
+        v_list = args[0] if args else []
+        graph = args[1] if len(args) > 1 else []
+        if isinstance(v_list, list) and isinstance(graph, list):
+            v_list.sort(key=lambda v: len(graph[v]) if 0 <= int(v) < len(graph) else 0, reverse=True)
+        return None, {"calls": 1, "total_ops": 1}
+
+    if name == "generate_random_graph":
+        n = int(args[0]) if args else 5
+        rng = random.Random(_experiment_seed(context, args[1] if len(args) > 1 else None))
+        graph = [[] for _ in range(n + 1)]
+        edge_prob = 0.3
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                if rng.random() < edge_prob:
+                    graph[i].append(j)
+                    graph[j].append(i)
+        return graph, {"calls": 1, "allocations": 1, "total_ops": 1}
+
+    if name == "generate_weight_matrix":
+        n = int(args[0]) if args else 5
+        inf = 999999
+        rng = random.Random(_experiment_seed(context, args[1] if len(args) > 1 else None))
+        matrix = [[inf] * (n + 1) for _ in range(n + 1)]
+        for i in range(1, n + 1):
+            matrix[i][i] = 0
+        for i in range(1, n + 1):
+            for j in range(i + 1, n + 1):
+                if rng.random() < 0.5:
+                    weight = rng.randint(1, 20)
+                    matrix[i][j] = weight
+                    matrix[j][i] = weight
+        return matrix, {"calls": 1, "allocations": 1, "total_ops": 1}
     
     if name == "array":
         if not args:
@@ -228,6 +373,47 @@ def _record_experiment_command(
         "meta": dict(meta or {}),
     }
     return EvalResult(value=value, counters=counters)
+
+
+def _expression_children(nodes: List["ASTNode"]) -> List["ASTNode"]:
+    return [node for node in nodes if getattr(node, "subtype", "") == "Expression"]
+
+
+def _refresh_counter_symbols(context: EvalContext) -> Dict[str, Any]:
+    counters = _experiment_state(context).get("runtime_counters", {})
+    saved: Dict[str, Any] = {}
+    for name, value in counters.items():
+        saved[name] = context.symbol_table.get(name)
+        context.symbol_table[name] = value
+    return saved
+
+
+def _restore_symbols(context: EvalContext, saved: Dict[str, Any]) -> None:
+    for name, value in saved.items():
+        if value is None:
+            context.symbol_table.pop(name, None)
+        else:
+            context.symbol_table[name] = value
+
+
+def _check_stop_if(context: EvalContext) -> bool:
+    state = _experiment_state(context)
+    stop_node = state.get("stop_if_node")
+    if stop_node is None:
+        return False
+
+    saved = _refresh_counter_symbols(context)
+    try:
+        res = _ensure_result(stop_node.evaluated(context))
+    finally:
+        _restore_symbols(context, saved)
+
+    stopped = _truthy(res.value)
+    state["stop_if_result"] = stopped
+    if stopped:
+        state["stopped"] = True
+        state["stop_reason"] = "STOP_IF condition matched"
+    return stopped
 
 
 def _eval_or_chain(children: List["ASTNode"], context: EvalContext) -> EvalResult:
@@ -522,6 +708,15 @@ class AlgorithmBlockEval(ASTNode.IAttrEval):
 
         context.symbol_table[algo_name] = algo_callable
 
+        if context.data_types.get("defer_algorithm_body"):
+            _safe_publish(
+                context,
+                _op("ASSIGN"),
+                {"kind": "algorithm_def", "name": algo_name, "params": param_names},
+                {"assignments": 1, "total_ops": 1},
+            )
+            return EvalResult(value=algo_name, counters={"assignments": 1, "total_ops": 1})
+
         return _ensure_result(body_node.evaluated(context))
 
 
@@ -609,11 +804,21 @@ class ParamCmdEval(ASTNode.IAttrEval):
             return EvalResult(value=None, counters={})
 
         param_name = _strip_quotes(getattr(args[0], "value", ""))
-        expr_node = args[-1]
-        expr_value, expr_counters = _literal_or_eval(expr_node, context)
-
         state = _experiment_state(context)
+        expr_counters: Dict[str, int] = {}
+        range_values: List[Any] = []
+        for expr_node in _expression_children(args):
+            expr_value, counters = _literal_or_eval(expr_node, context)
+            range_values.append(expr_value)
+            expr_counters = _merge_all(expr_counters, counters)
+
+        expr_value = context.symbol_table.get(param_name, state.get("size"))
+        if expr_value is None:
+            expr_value = range_values[0] if range_values else None
+
         state.setdefault("params", {})[param_name] = expr_value
+        state.setdefault("param_ranges", {})[param_name] = tuple(range_values)
+        context.symbol_table[param_name] = expr_value
 
         _safe_publish(
             context,
@@ -699,7 +904,7 @@ class GenCmdEval(ASTNode.IAttrEval):
         gen data = array(100, random)
     """
     def __call__(self, value: str, children: List["ASTNode"], context: "EvalContext") -> EvalResult:
-        args = _command_args(children, "gen")
+        args = _command_args(children, "generator")
         if not args:
             return EvalResult(value=None, counters={})
 
@@ -728,6 +933,7 @@ class GenCmdEval(ASTNode.IAttrEval):
         state.setdefault("generators", {})[target_name] = {
             "value": spec_value,
         }
+        context.symbol_table[target_name] = spec_value
 
         # Публикуем событие выделения памяти
         _safe_publish(
@@ -756,22 +962,21 @@ class CounterCmdEval(ASTNode.IAttrEval):
             return EvalResult(value=None, counters={})
 
         counter_name = _strip_quotes(getattr(args[0], "value", ""))
-        op_text = _describe_node(args[1])
-        threshold_value, threshold_counters = _literal_or_eval(args[2], context)
+        event_name = _strip_quotes(getattr(args[2], "value", _describe_node(args[2])))
 
         rule = {
             "counter": counter_name,
-            "op": op_text,
-            "threshold": threshold_value,
+            "event": event_name,
         }
 
         state = _experiment_state(context)
-        state["counter_rule"] = rule
+        state.setdefault("counter_aliases", {})[counter_name] = event_name
+        state.setdefault("counter_rules", []).append(rule)
 
         _safe_publish(
             context,
             _op("CMP"),
-            {"kind": "counter_rule", **rule},
+            {"kind": "counter_rule", "experiment_control": True, **rule},
             {"comparisons": 1, "total_ops": 1},
         )
 
@@ -779,7 +984,7 @@ class CounterCmdEval(ASTNode.IAttrEval):
             context,
             "CounterCmd",
             rule,
-            _merge_all(threshold_counters, {"comparisons": 1, "total_ops": 1}),
+            {"comparisons": 1, "total_ops": 1},
         )
 
 
@@ -789,26 +994,20 @@ class StopIfCmdEval(ASTNode.IAttrEval):
     """
     def __call__(self, value: str, children: List["ASTNode"], context: "EvalContext") -> EvalResult:
         args = _command_args(children, "stop_if")
-        if len(args) < 3:
+        if not args:
             return EvalResult(value=None, counters={})
 
-        counter_name = _strip_quotes(getattr(args[0], "value", ""))
-        op_text = _describe_node(args[1])
-        threshold_value, threshold_counters = _literal_or_eval(args[2], context)
-
-        rule = {
-            "counter": counter_name,
-            "op": op_text,
-            "threshold": threshold_value,
-        }
+        condition_node = args[0]
+        rule = {"condition": _describe_node(condition_node)}
 
         state = _experiment_state(context)
         state["stop_if"] = rule
+        state["stop_if_node"] = condition_node
 
         _safe_publish(
             context,
             _op("CMP"),
-            {"kind": "stop_if", **rule},
+            {"kind": "stop_if", "experiment_control": True, **rule},
             {"comparisons": 1, "total_ops": 1},
         )
 
@@ -816,7 +1015,7 @@ class StopIfCmdEval(ASTNode.IAttrEval):
             context,
             "StopIfCmd",
             rule,
-            _merge_all(threshold_counters, {"comparisons": 1, "total_ops": 1}),
+            {"comparisons": 1, "total_ops": 1},
         )
 
 
@@ -836,18 +1035,28 @@ class RunCmdEval(ASTNode.IAttrEval):
         if run_payload:
             state["run_args"] = run_payload
 
+        run_result = None
+        run_counters: Dict[str, int] = {}
+        if args:
+            result = _ensure_result(args[0].evaluated(context))
+            run_result = result.value
+            run_counters = result.counters
+            state["last_run_result"] = run_result
+            state.setdefault("run_results", []).append(run_result)
+            _check_stop_if(context)
+
         _safe_publish(
             context,
             _op("CALL"),
-            {"kind": "run", "args": run_payload},
+            {"kind": "run", "args": run_payload, "result": run_result},
             {"calls": 1, "total_ops": 1},
         )
 
         return _record_experiment_command(
             context,
             "RunCmd",
-            True,
-            {"calls": 1, "total_ops": 1},
+            run_result,
+            _merge_all(run_counters, {"calls": 1, "total_ops": 1}),
             {"args": run_payload},
         )
 
@@ -1274,12 +1483,12 @@ class ForInStatementEval(ASTNode.IAttrEval):
     for target in iterable : body
     """
     def __call__(self, value: str, children: List["ASTNode"], context: "EvalContext") -> EvalResult:
-        if len(children) < 3:
+        if len(children) < 6:
             return _eval_sequence(children, context)
 
-        target_node = children[0]
-        iterable_node = children[1]
-        body_node = children[2]
+        target_node = children[1]
+        iterable_node = children[3]
+        body_node = children[5]
 
         iterable_res = _ensure_result(iterable_node.evaluated(context))
         items = _iter_items(iterable_res.value)

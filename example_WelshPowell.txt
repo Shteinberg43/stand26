@@ -1,0 +1,37 @@
+ALGORITHM WelshPowellColoring(Graph: list of list of int, p: int)
+    V = get_vertices(Graph)
+    quick_sort_by_degree(V, Graph)
+    C = create_array(p, 0)
+    FOR v IN V DO
+        C[v] = 0
+    ENDFOR
+    c = 1
+    WHILE NOT is_empty(V) DO
+        FOR v IN V DO
+            canColor = 1
+            FOR u IN adj(Graph, v) DO
+                IF C[u] == c THEN
+                    canColor = 0
+                ENDIF
+            ENDFOR
+            IF canColor == 1 THEN
+                C[v] = c
+                remove(V, v)
+            ENDIF
+        ENDFOR
+        c = c + 1
+    ENDWHILE
+    RETURN C
+END
+
+EXPERIMENT WelshPowell_Exp
+    PARAM N = RANGE(20, 100, 20)
+    TRIALS 3
+    SEED 777
+    GENERATOR Graph = generate_random_graph(N)
+    COUNTER color_checks ON CMP
+    COUNTER successful_colors ON ASSIGN
+    STOP_IF color_checks > 10000000
+    RUN WelshPowellColoring(Graph, N)
+    EXPORT CSV "welsh_powell_stats.csv"
+END

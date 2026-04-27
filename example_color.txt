@@ -1,0 +1,26 @@
+ALGORITHM GraphColoring(Graph: list of list of int, p: int)
+    C = create_array(p, 0)
+    FOR v FROM 1 TO p DO
+        C[v] = 0
+    ENDFOR
+    FOR v FROM 1 TO p DO
+        A = range_set(1, p)
+        FOR u IN adj(Graph, v) DO
+            remove(A, C[u])
+        ENDFOR
+        C[v] = min(A)
+    ENDFOR
+    RETURN C
+END
+
+EXPERIMENT GraphColoring_Exp
+    PARAM N = RANGE(10, 100, 20)
+    TRIALS 3
+    SEED 42
+    GENERATOR Graph = generate_random_graph(N)
+    COUNTER array_reads ON ARRAY_READ
+    COUNTER set_ops ON remove
+    STOP_IF array_reads > 10000000
+    RUN GraphColoring(Graph, N)
+    EXPORT CSV "coloring_stats.csv"
+END

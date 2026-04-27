@@ -1,0 +1,42 @@
+ALGORITHM FloydWarshall(W: list of list of int, p: int)
+    T = create_matrix(p, p)
+    Pi = create_matrix(p, p)
+    INF = 999999
+    FOR i FROM 1 TO p DO
+        FOR j FROM 1 TO p DO
+            T[i, j] = W[i, j]
+            IF W[i, j] == INF THEN
+                Pi[i, j] = 0
+            ELSE
+                Pi[i, j] = i
+            ENDIF
+        ENDFOR
+    ENDFOR
+    FOR i FROM 1 TO p DO
+        FOR j FROM 1 TO p DO
+            FOR k FROM 1 TO p DO
+                IF i != j AND T[j, i] != INF AND i != k AND T[i, k] != INF AND T[j, k] > T[j, i] + T[i, k] THEN
+                    T[j, k] = T[j, i] + T[i, k]
+                    Pi[j, k] = Pi[i, k]
+                ENDIF
+            ENDFOR
+        ENDFOR
+        FOR j FROM 1 TO p DO
+            IF T[j, j] < 0 THEN
+                RETURN [T, Pi]
+            ENDIF
+        ENDFOR
+    ENDFOR
+    RETURN [T, Pi]
+END
+
+EXPERIMENT FloydWarshall_Exp
+    PARAM N = RANGE(10, 30, 10)
+    TRIALS 1
+    SEED 2048
+    GENERATOR W = generate_weight_matrix(N)
+    COUNTER matrix_reads ON ARRAY_READ
+    STOP_IF matrix_reads > 50000000
+    RUN FloydWarshall(W, N)
+    EXPORT CSV "floyd_warshall_stats.csv"
+END

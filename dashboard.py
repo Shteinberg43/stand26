@@ -15,9 +15,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import traceback
+import csv
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from typing import Any, Dict, List, Tuple
 
@@ -135,6 +137,111 @@ def generate_input(gen_name: str, size: int, seed: int) -> List[int]:
     return inserter.target
 
 
+def _ast_has_subtype(node: Any, subtype: str) -> bool:
+    if getattr(node, "subtype", None) == subtype:
+        return True
+    return any(_ast_has_subtype(child, subtype) for child in getattr(node, "children", []))
+
+
+def _sample_value(value: Any, limit: int = 20) -> List[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value[:limit]
+    if isinstance(value, tuple):
+        return list(value[:limit])
+    return [value]
+
+
+def _sizes_from_range(lo: int, hi: int, step: int) -> List[int]:
+    if step == 0:
+        return [lo]
+    if lo <= hi and step < 0:
+        step = abs(step)
+    if lo > hi and step > 0:
+        step = -step
+    stop = hi + (1 if step > 0 else -1)
+    return list(range(lo, stop, step))
+
+
+def _experiment_config_from_source(
+    source: str,
+    fallback_sizes: List[int],
+    fallback_trials: int,
+) -> tuple[List[int], int]:
+    range_match = re.search(
+        r"\bPARAM\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*RANGE\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)",
+        source,
+        re.IGNORECASE,
+    )
+    trials_match = re.search(r"\bTRIALS\s+(\d+)", source, re.IGNORECASE)
+
+    sizes = list(fallback_sizes)
+    if range_match:
+        lo, hi, step = (int(part) for part in range_match.groups())
+        sizes = _sizes_from_range(lo, hi, step)
+
+    trials = int(trials_match.group(1)) if trials_match else fallback_trials
+    return sizes, max(1, trials)
+
+
+def _export_file_from_source(source: str) -> str | None:
+    export_match = re.search(
+        r'\bEXPORT\s+CSV\s+"([^"]+)"',
+        source,
+        re.IGNORECASE,
+    )
+    if not export_match:
+        return None
+    return os.path.basename(export_match.group(1))
+
+
+def _experiment_name_from_source(source: str) -> str | None:
+    experiment_match = re.search(
+        r"\bEXPERIMENT\s+([A-Za-z_][A-Za-z0-9_]*)",
+        source,
+        re.IGNORECASE,
+    )
+    return experiment_match.group(1) if experiment_match else None
+
+
+def _write_export_csv(filename: str, runs: List[dict]) -> str:
+    export_path = os.path.join(ROOT, filename)
+    counter_names = sorted({name for run in runs for name in run.get("counters", {})})
+    fieldnames = [
+        "run_id",
+        "algorithm",
+        "generator_name",
+        "input_size",
+        "seed",
+        "status",
+        "error_message",
+        "elapsed_sec",
+        "sorted_correctly",
+        *counter_names,
+    ]
+
+    with open(export_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for run in runs:
+            row = {
+                "run_id": run.get("run_id", ""),
+                "algorithm": run.get("algorithm", ""),
+                "generator_name": run.get("generator_name", ""),
+                "input_size": run.get("input_size", ""),
+                "seed": run.get("seed", ""),
+                "status": run.get("status", ""),
+                "error_message": run.get("error_message") or "",
+                "elapsed_sec": run.get("elapsed_sec", ""),
+                "sorted_correctly": run.get("sorted_correctly"),
+            }
+            row.update({name: run.get("counters", {}).get(name, 0) for name in counter_names})
+            writer.writerow(row)
+
+    return export_path
+
+
 # =======================================================================
 # SINGLE EXPERIMENT
 # =======================================================================
@@ -148,7 +255,8 @@ def run_single_experiment(
     max_ops: int = 500_000,
     collect_history: bool = False,
 ) -> dict:
-    input_data = generate_input(gen_name, size, seed)
+    graph_mode = _ast_has_subtype(ast_node, "RunCmd")
+    input_data = [] if graph_mode else generate_input(gen_name, size, seed)
 
     bus = EventBus()
     tracker = CounterTracker()
@@ -161,11 +269,21 @@ def run_single_experiment(
 
     ctx = EvalContext()
     ctx.event_bus = bus
+    ctx.data_types["defer_algorithm_body"] = graph_mode
+    ctx.data_types["experiment"] = {
+        "size": size,
+        "trial_seed": seed,
+    }
+    ctx.symbol_table["N"] = size
+    ctx.symbol_table["p"] = size
+    ctx.symbol_table["seed"] = seed
+
     arr_copy = list(input_data)
-    ctx.symbol_table["arr"] = arr_copy
-    ctx.symbol_table["a"] = arr_copy
-    ctx.symbol_table["lo"] = 0
-    ctx.symbol_table["hi"] = len(arr_copy) - 1
+    if not graph_mode:
+        ctx.symbol_table["arr"] = arr_copy
+        ctx.symbol_table["a"] = arr_copy
+        ctx.symbol_table["lo"] = 0
+        ctx.symbol_table["hi"] = len(arr_copy) - 1
 
     head = ast_node
 
@@ -181,13 +299,28 @@ def run_single_experiment(
 
     elapsed = time.monotonic() - t0
 
+    experiment_state = ctx.data_types.get("experiment", {})
     counters = tracker.snapshot()
+    if experiment_state.get("stopped") and status == "OK":
+        status = "LIMIT"
+        error_msg = experiment_state.get("stop_reason", "STOP_IF condition matched")
+
     if counters.get("total_ops", 0) > max_ops and status == "OK":
         status = "LIMIT"
         error_msg = f"total_ops={counters['total_ops']} > {max_ops}"
 
-    out_arr = ctx.symbol_table.get("arr", arr_copy)
-    sorted_ok = list(out_arr) == sorted(input_data) if status == "OK" else None
+    if graph_mode:
+        out_value = experiment_state.get("last_run_result")
+        generated_values = experiment_state.get("generators", {})
+        first_generated = next(iter(generated_values.values()), {}).get("value") if generated_values else None
+        sorted_ok = None
+        input_sample = _sample_value(first_generated)
+        output_sample = _sample_value(out_value)
+    else:
+        out_value = ctx.symbol_table.get("arr", arr_copy)
+        sorted_ok = list(out_value) == sorted(input_data) if status == "OK" else None
+        input_sample = input_data[:20]
+        output_sample = list(out_value)[:20]
 
     return {
         "run_id": f"{algorithm_name}_{gen_name}_n{size}_s{seed}",
@@ -201,8 +334,8 @@ def run_single_experiment(
         "counters": counters,
         "elapsed_sec": elapsed,
         "history": collector.history if collector else [],
-        "input_sample": input_data[:20],
-        "output_sample": list(out_arr)[:20],
+        "input_sample": input_sample,
+        "output_sample": output_sample,
     }
 
 
@@ -221,35 +354,62 @@ def run_dynamic_experiments(
     """
 
     algo_nodes: Dict[str, Any] = {}
+    algo_configs: Dict[str, dict] = {}
     algo_names: List[str] = []
-    for name, code in algos:
+    for preset_name, code in algos:
+        name = _experiment_name_from_source(code) or preset_name
         print(f"  Parsing {name} ...", end=" ", flush=True)
-        algo_nodes[name] = _parse_source(code)
+        ast_node = _parse_source(code)
+        algo_nodes[name] = ast_node
+        graph_mode = _ast_has_subtype(ast_node, "RunCmd")
+        algo_sizes, algo_trials = _experiment_config_from_source(code, sizes, trials)
+        algo_configs[name] = {
+            "sizes": algo_sizes,
+            "trials": algo_trials,
+            "generators": ["experiment"] if graph_mode else list_generators(),
+            "export_file": _export_file_from_source(code),
+        }
         algo_names.append(name)
         print("OK")
 
-    generators = list_generators()
+    generators: List[str] = []
+    all_sizes: List[int] = []
+    for config in algo_configs.values():
+        for gen_name in config["generators"]:
+            if gen_name not in generators:
+                generators.append(gen_name)
+        for size in config["sizes"]:
+            if size not in all_sizes:
+                all_sizes.append(size)
+    all_sizes.sort()
 
     stats_by_algo: Dict[str, StatsCollector] = {a: StatsCollector() for a in algo_names}
     all_runs: List[dict] = []
     timeline_run = None
 
-    total = len(algo_names) * len(generators) * len(sizes) * trials
+    total = sum(
+        len(config["generators"]) * len(config["sizes"]) * config["trials"]
+        for config in algo_configs.values()
+    )
     done = 0
 
     for algo_name in algo_names:
         ast_node = algo_nodes[algo_name]
-        for gen_name in generators:
-            for size in sizes:
-                for trial in range(trials):
+        config = algo_configs[algo_name]
+        algo_sizes = config["sizes"]
+        algo_trials = config["trials"]
+        algo_generators = config["generators"]
+        for gen_name in algo_generators:
+            for size in algo_sizes:
+                for trial in range(algo_trials):
                     done += 1
                     if done % 10 == 0 or done == total or done == 1:
                         print(f"  [{done}/{total}] {algo_name} {gen_name} N={size} t={trial}")
 
                     need_history = (
                         algo_name == algo_names[0]
-                        and gen_name == "random"
-                        and size == sizes[-1]
+                        and gen_name == algo_generators[0]
+                        and size == algo_sizes[-1]
                         and trial == 0
                     )
                     result = run_single_experiment(
@@ -270,6 +430,15 @@ def run_dynamic_experiments(
 
                     if need_history:
                         timeline_run = result
+
+    exports: Dict[str, str] = {}
+    for algo_name in algo_names:
+        export_file = algo_configs[algo_name].get("export_file")
+        if not export_file:
+            continue
+        algo_runs = [run for run in all_runs if run["algorithm"] == algo_name]
+        if algo_runs:
+            exports[algo_name] = _write_export_csv(export_file, algo_runs)
 
     # ---- build per-algorithm stats ----
     summaries: Dict[str, dict] = {}
@@ -327,9 +496,10 @@ def run_dynamic_experiments(
             "total_steps": len(timeline),
         },
         "generators": generators,
-        "sizes": sizes,
+        "sizes": all_sizes,
         "counter_names": counter_names,
         "algorithms": algo_names,
+        "exports": exports,
         "total_runs": len(all_runs),
         "ok_runs": sum(1 for r in all_runs if r["status"] == "OK"),
     }

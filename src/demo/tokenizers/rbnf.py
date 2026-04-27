@@ -15,7 +15,9 @@ class RBNFTokenizer(TokenizerBase):
         for key_type, key_value in meta_grammar.keys:
             # Экранируем специальные символы в ключах
             pattern = re.escape(key_value)
-            self.patterns.append((key_value, re.compile(f"{pattern}")))
+            if key_type == "ident":
+                pattern = f"{pattern}(?![A-Za-z0-9_])"
+            self.patterns.append((key_value, re.compile(pattern)))
         self.patterns = sorted(self.patterns, key=lambda t: len(t[0]), reverse=True)
         # Затем добавляем терминалы по убыванию специфичности
         # ordered_terminals = self.grammar.terminals.values()
@@ -26,6 +28,7 @@ class RBNFTokenizer(TokenizerBase):
             self.patterns.append((terminal.name, re.compile(f"{terminal.pattern}")))
 
     def tokenize(self, input_str: str) -> List[Token]:
+        input_str = re.sub(r"//[^\n]*", "", input_str)
 
         tokens = []
         position = 0
